@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from . models import Listing
-from rest_framework import status
+from rest_framework import status, permissions
 from . serializers import ListingSerializer
 
 
@@ -149,3 +149,56 @@ class ManageListingView(APIView):
                 {"error": "Something went wrong when creating listing"},
                 status = status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class ListingDetailView(APIView):
+    def get(self, request, format=None):
+        try:
+            slug = request.query_params.get('slug')
+            if not slug:
+                return Response(
+                    {"error": "Must provide slug"},
+                    status= status.HTTP_400_BAD_REQUEST
+                )
+
+            if not Listing.objects.filter(slug=slug, is_published=True).exists():
+                return Response(
+                    {"error": "Published listing with this slug does not exist"},
+                    status= status.HTTP_400_BAD_REQUEST
+                )
+
+            listing = Listing.objects.get(slug=slug, is_published=True)
+            listing = ListingSerializer(listing)
+            return Response(
+                {"listing":  listing.data},
+                status = status.HTTP_200_OK
+            )
+
+        except:
+            return Response(
+                {"error": "Error when retrieving listing detail"},
+                status= status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ListingsView(APIView):
+    permission_classes = (permissions.AllowAny,)
+    def get(self, request, format=None):
+            try:
+                if not Listing.objects.filter(is_published=True).exists():
+                    return Response(
+                        {"error": "No published listings available"},
+                        status = status.HTTP_404_NOT_FOUND
+                    )
+
+                listings = Listing.objects.filter(is_published=True).order_by('-date_created')
+                listings = ListingSerializer(listings, many=True)
+                return Response(
+                    {"listings": listings.data},
+                    status = status.HTTP_200_OK
+                )
+
+            except: 
+                return Response(
+                    {"error": "Error when retrieving listing"},
+                    status= status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
