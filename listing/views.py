@@ -1,4 +1,3 @@
-from functools import partial
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from . models import Listing
@@ -265,6 +264,44 @@ class ManageListingView(APIView):
                 {"error": "Something went wrong when updating listing"},
                 status = status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def patch(self, request, pk, format=None):
+        try:
+
+            try:
+                listing = Listing.objects.get(pk=pk)
+            except Listing.DoesNotExist:
+                return Response(
+                    {"error": "Listing does not exist"},
+                    status = status.HTTP_404_NOT_FOUND
+                )
+
+            user = request.user
+            if listing.realtor != user.email:
+                return Response({'response': "You don't have permissions to edit that!"})
+
+            data = request.data
+            is_published = data['is_published']
+            if is_published == 'True':
+                is_published = True
+            else:
+                is_published = False
+
+            Listing.objects.filter(realtor=user.email, pk=pk).update(
+                is_published = is_published
+            )
+
+            return Response(
+                {"success": "Listing is_published updated sucessfully"},
+                status = status.HTTP_200_OK
+            )
+
+        except:
+            return Response(
+                {"error": "Something went wrong when updating is_published."},
+                status = status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class ListingDetailView(APIView):
     def get(self, request, format=None):
