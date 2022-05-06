@@ -204,7 +204,10 @@ class ManageListingView(APIView):
 
             user = request.user
             if listing.realtor != user.email:
-                return Response({'response': "You don't have permissions to edit that!"})
+                return Response(
+                    {'response': "You don't have permissions to edit that!"},
+                    status = status.HTTP_403_FORBIDDEN
+                    )
 
             data = request.data
             data = self.validate_data(data)
@@ -278,7 +281,10 @@ class ManageListingView(APIView):
 
             user = request.user
             if listing.realtor != user.email:
-                return Response({'response': "You don't have permissions to edit that!"})
+                return Response(
+                    {'response': "You don't have permissions to edit that!"},
+                    status = status.HTTP_403_FORBIDDEN
+                    )
 
             data = request.data
             is_published = data['is_published']
@@ -299,6 +305,42 @@ class ManageListingView(APIView):
         except:
             return Response(
                 {"error": "Something went wrong when updating is_published."},
+                status = status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request, pk, format=None):
+        try:
+            try:
+                listing = Listing.objects.get(pk=pk)
+            except Listing.DoesNotExist:
+                return Response(
+                    {"error": "Listing does not exist"},
+                    status = status.HTTP_404_NOT_FOUND
+                )
+
+            user = request.user
+            if listing.realtor != user.email:
+                return Response(
+                    {'response': "You don't have permissions to delete that!"},
+                    status = status.HTTP_403_FORBIDDEN
+                    )
+
+            Listing.objects.filter(realtor=user.email, pk=pk).delete()
+
+            if not Listing.objects.filter(realtor=user.email, pk=pk).exists():
+                return Response(
+                    {"success": "Listing deleted sucessfully"},
+                    status = status.HTTP_204_NO_CONTENT
+                )
+            else: 
+                return Response(
+                    {"error": "Failed to delete listing"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+
+        except:
+            return Response(
+                {"error": "Something went wrong when deleting listing."},
                 status = status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -332,6 +374,7 @@ class ListingDetailView(APIView):
                 status= status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
 class ListingsView(APIView):
     permission_classes = (permissions.AllowAny,)
     def get(self, request, format=None):
@@ -351,6 +394,6 @@ class ListingsView(APIView):
 
             except: 
                 return Response(
-                    {"error": "Error when retrieving listing"},
+                    {"error": "Error when retrieving listings"},
                     status= status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
