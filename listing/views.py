@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from . models import Listing
 from rest_framework import status, permissions
 from . serializers import ListingSerializer
+from django.contrib.postgres.search import SearchVector, SearchQuery
 
 
 class ManageListingView(APIView):
@@ -71,7 +72,7 @@ class ManageListingView(APIView):
                 bathrooms = float(data['bathrooms'])
             except:
                 return Response(
-                    {"error": "Bedrooms must be a float value."},
+                    {"error": "Bathrooms must be a float value."},
                     status = status.HTTP_400_BAD_REQUEST
                 )
             if bathrooms <= 0 or bathrooms >= 10:
@@ -397,3 +398,45 @@ class ListingsView(APIView):
                     {"error": "Error when retrieving listings"},
                     status= status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
+
+
+class SearchListingView(APIView):
+    permission_classes = (permissions.AllowAny,)
+    def get(self, request, format=None):
+        try:
+            search = request.query_params.get('search')
+            if not search:
+                return Response(
+                    {"error": "Must pass search criteria"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+
+            vector = SearchVector('title', 'description', 'address', 'state', 'city', 'home_type', 'sale_type', 'realtor')
+            query = SearchQuery(search)
+            if not Listing.objects.annotate(
+                search=vector
+            ).filter(
+                search=query,
+                is_published=True
+            ).exists():
+                return Response(
+                    {"error": "No listing matches this criteria"},
+                    status = status.HTTP_404_NOT_FOUND
+                )
+
+            listings = Listing.objects.annotate(
+                search=vector
+            ).filter(
+                search=query,
+                is_published=True
+            )
+            listings = ListingSerializer(listings, many=True)
+
+            return Response(
+                {"listings": listings.data}
+            )
+        except:
+            return Response(
+                {"error": "Something went wrong when searching listings."},
+                status= status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
