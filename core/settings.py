@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'user.apps.UserConfig',
     'listing.apps.ListingConfig',
     'django_cleanup.apps.CleanupConfig',
+    'django.contrib.postgres',
 ]
 
 MIDDLEWARE = [
