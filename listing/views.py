@@ -60,21 +60,22 @@ class ManageListingView(APIView):
             description = data['description']
 
             try:
-                price = int(data['price'])
-                bedrooms = int(data['bedrooms'])
+                price = data['price']
+                if len(price) > 17:
+                    return -1
+                price = int(price)
+                bedrooms = data['bedrooms']
+                if len(bedrooms) > 2:
+                    return -1
+                bedrooms = int(bedrooms)
             except:
-                return Response(
-                    {"error": "Must be an Integer."},
-                    status = status.HTTP_400_BAD_REQUEST
-                )
-
+                return -1
+                
             try:
                 bathrooms = float(data['bathrooms'])
             except:
-                return Response(
-                    {"error": "Bathrooms must be a float value."},
-                    status = status.HTTP_400_BAD_REQUEST
-                )
+                return -2 
+
             if bathrooms <= 0 or bathrooms >= 10:
                 bathrooms = 1.0
             bathrooms = round(bathrooms, 1)
@@ -136,6 +137,18 @@ class ManageListingView(APIView):
 
             data = request.data
             data = self.validate_data(data)
+
+            if data == -1:
+                return Response(
+                    {"error": "Invalid price or bedrooms."},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+
+            if data == -2:
+                return Response(
+                    {"error": "Invalid bathrooms."},
+                    status = status.HTTP_400_BAD_REQUEST
+                ) 
 
             title = data['title']
             address = data['address']
@@ -212,6 +225,18 @@ class ManageListingView(APIView):
 
             data = request.data
             data = self.validate_data(data)
+
+            if data == -1:
+                return Response(
+                    {"error": "Must be an Integer."},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+
+            if data == -2:
+                return Response(
+                    {"error": "Bathrooms must be a float value."},
+                    status = status.HTTP_400_BAD_REQUEST
+                ) 
 
             title = data['title']
             address = data['address']
